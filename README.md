@@ -9,6 +9,8 @@
 | 1   | Kanafira Vanesha Putri | 5027241010 |
 | 2   | Reza Aziz Simatupang   | 5027241051 |
 
+## Reporting 
+
 1. Membuat topologi Jaringan dan Config Node
     ![alt text](assets/soal_1.png) 
 2. Konfigurasi NAT dan Konektivitas Internet
@@ -24,8 +26,16 @@
         apt update
         echo nameserver 192.168.122.1 > /etc/resolv.conf
     </pre>
-4. 
-5. 
+4. Lakukan Setup IP statis & default gateway pada setiap client non-router
+
+    Ulangi pada semua client non-router namun ganti bagian addresses & gateway4 nya sesuai host
+
+    Lalu coba verifikasi dari erendil
+
+5. Masukkan command pada eonwe agar router eonwe dapat meneruskan paket antar subnet dan keluar ke internet
+
+    Lalu lakukan verifikasi dari erendil untuk melihat apakah host berhasil memiliki koneksi keluar
+
 6. 
 7. 
 8. 
