@@ -91,6 +91,11 @@
             }
         }
     </pre>
+    * restart server
+    <pre>
+        service nginx restart
+        service nginx status
+    </pre>
     * verifikasi
 13. 
 14. 
