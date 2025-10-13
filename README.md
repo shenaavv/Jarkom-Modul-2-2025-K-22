@@ -30,14 +30,68 @@
 # MAAF LAPORAN LANJUTAN MENYUSUL
 
 4. 
-5.
+5. 
 6. 
 7. 
 8. 
 9. 
 10. 
 11. 
-12. 
+12. Membuat path admin pada node sirion, dan implementasi basic autentikasi (sirion)
+    * install nginx dan apache
+    <pre>
+        apt-get install apache2-utils -y
+        apt install nginx -y
+    </pre>
+    * add password
+    <pre>
+        htpasswd -c /etc/nginx/.htpasswd admin 
+        cat /etc/nginx/.htpasswd 
+    </pre>
+    * edit nginx config
+    <pre>
+        nano /etc/nginx/sites-available/default
+    </pre>
+    * isi config
+    <pre>
+        server {
+            listen 80;
+            server_name www.K22.com sirion.K22.com;
+
+            # ... konfigurasi lain yang sudah ada ...
+
+            # Path untuk /static (sudah ada dari soal sebelumnya)
+            location /static {
+                proxy_pass http://192.222.3.5;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+
+            # Path untuk /app (sudah ada dari soal sebelumnya)
+            location /app {
+                proxy_pass http://192.222.3.6;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+
+            # Path untuk /admin dengan Basic Auth
+            location /admin {
+                auth_basic "Restricted Area";
+                auth_basic_user_file /etc/nginx/.htpasswd;
+                
+                # Kamu bisa proxy ke backend tertentu atau serve konten statis
+                # Contoh jika ingin serve konten statis:
+                root /var/www/html;
+                index index.html;
+                
+                # Atau jika ingin proxy ke backend:
+                # proxy_pass http://<backend_server>;
+                # proxy_set_header Host $host;
+                # proxy_set_header X-Real-IP $remote_addr;
+            }
+        }
+    </pre>
+    * verifikasi
 13. 
 14. 
 15. 
