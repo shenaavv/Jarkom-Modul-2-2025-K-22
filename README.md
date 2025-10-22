@@ -99,32 +99,32 @@
 
 6. Lonceng Valmar berdentang mengikuti irama Tirion. Pastikan zone transfer berjalan, Pastikan Valmar (ns2) telah menerima salinan zona terbaru dari Tirion (ns1). Nilai serial SOA di keduanya harus sama
 
-<pre>
-    #!/bin/bash
-    cat > /etc/bind/db.10.15.43 <<'EOF'
-    $TTL 86400
-    @   IN  SOA ns1.K22.com. admin.K22.com. (
-            2025101301
-            3600
-            1800
-            604800
-            86400 )
-        IN  NS  ns1.K22.com.
-        IN  NS  ns2.K22.com.
-    35  IN  PTR sirion.K22.com.
-    38  IN  PTR lindon.K22.com.
-    39  IN  PTR vingilot.K22.com.
-    EOF
+    <pre>
+        #!/bin/bash
+        cat > /etc/bind/db.10.15.43 <<'EOF'
+        $TTL 86400
+        @   IN  SOA ns1.K22.com. admin.K22.com. (
+                2025101301
+                3600
+                1800
+                604800
+                86400 )
+            IN  NS  ns1.K22.com.
+            IN  NS  ns2.K22.com.
+        35  IN  PTR sirion.K22.com.
+        38  IN  PTR lindon.K22.com.
+        39  IN  PTR vingilot.K22.com.
+        EOF
 
-    echo '
-    zone "43.15.10.in-addr.arpa" {
-        type master;
-        file "/etc/bind/db.10.15.43";
-        allow-transfer { 192.234.3.4; };
-    };' >> /etc/bind/named.conf.local
+        echo '
+        zone "43.15.10.in-addr.arpa" {
+            type master;
+            file "/etc/bind/db.10.15.43";
+            allow-transfer { 192.234.3.4; };
+        };' >> /etc/bind/named.conf.local
 
-    service bind9 restart
-</pre>
+        service bind9 restart
+    </pre>
 
 
 7. Peta kota dan pelabuhan dilukis. Sirion sebagai gerbang, Lindon sebagai web statis, Vingilot sebagai web dinamis. Tambahkan pada zona .com A record untuk sirion..com (IP Sirion), lindon..com (IP Lindon), dan vingilot..com (IP Vingilot). Tetapkan CNAME :
@@ -147,44 +147,44 @@
    
 8. Setiap jejak harus bisa diikuti. Di Tirion (ns1) deklarasikan satu reverse zone untuk segmen DMZ tempat Sirion, Lindon, Vingilot berada. Di Valmar (ns2) tarik reverse zone tersebut sebagai slave, isi PTR untuk ketiga hostname itu agar pencarian balik IP address mengembalikan hostname yang benar, lalu pastikan query reverse untuk alamat Sirion, Lindon, Vingilot dijawab authoritative.
 
-<pre>
-    cat > /etc/resolv.conf <<EOF
-    nameserver 192.234.3.3
-    nameserver 192.234.3.4
-    nameserver 192.168.122.1
-    EOF
-</pre>
+    <pre>
+        cat > /etc/resolv.conf <<EOF
+        nameserver 192.234.3.3
+        nameserver 192.234.3.4
+        nameserver 192.168.122.1
+        EOF
+    </pre>
 
 9. Lampion Lindon dinyalakan. Jalankan web statis pada hostname static.<xxxx>.com dan buka folder arsip /annals/ dengan autoindex (directory listing) sehingga isinya dapat ditelusuri. Akses harus dilakukan melalui hostname, bukan IP.
-<pre>
-    echo "lindon" > /etc/hostname
-    hostname lindon
-    ip route add default via 10.15.43.29
+    <pre>
+        echo "lindon" > /etc/hostname
+        hostname lindon
+        ip route add default via 10.15.43.29
 
-    apt update
-    apt install -y nginx
+        apt update
+        apt install -y nginx
 
-    mkdir -p /var/www/static.K22.com/html/annals
-    echo "<h1>Lindon - K22</h1>" > /var/www/static.K22.com/html/index.html
-    echo "Archived record" > /var/www/static.K22.com/html/annals/record.txt
+        mkdir -p /var/www/static.K22.com/html/annals
+        echo "h1 Lindon - K22 h1" > /var/www/static.K22.com/html/index.html
+        echo "Archived record" > /var/www/static.K22.com/html/annals/record.txt
 
-    cat > /etc/nginx/sites-available/static.K22.com <<'EOF'
-    server {
-        listen 80;
-        server_name static.K22.com;
-        root /var/www/static.K22.com/html;
-        index index.html;
-        location /annals/ {
-            autoindex on;
-            autoindex_localtime on;
+        cat > /etc/nginx/sites-available/static.K22.com <<'EOF'
+        server {
+            listen 80;
+            server_name static.K22.com;
+            root /var/www/static.K22.com/html;
+            index index.html;
+            location /annals/ {
+                autoindex on;
+                autoindex_localtime on;
+            }
         }
-    }
-    EOF
+        EOF
 
-    ln -sf /etc/nginx/sites-available/static.K22.com /etc/nginx/sites-enabled/
-    rm -f /etc/nginx/sites-enabled/default
-    service nginx restart
-</pre>
+        ln -sf /etc/nginx/sites-available/static.K22.com /etc/nginx/sites-enabled/
+        rm -f /etc/nginx/sites-enabled/default
+        service nginx restart
+    </pre>
 
 10. Vingilot mengisahkan cerita dinamis. Jalankan web dinamis (PHP-FPM) pada hostname app.<xxxx>.com dengan beranda dan halaman about, serta terapkan rewrite sehingga /about berfungsi tanpa akhiran .php. Akses harus dilakukan melalui hostname.
 
