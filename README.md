@@ -73,6 +73,7 @@
 
         service bind9 restart
     </pre>
+    ![alt text](assets/soal_4.jpeg)
 
 5. “Nama memberi arah,” kata Eonwe. Namai semua tokoh (hostname) sesuai glosarium, eonwe, earendil, elwing, cirdan, elrond, maglor, sirion, tirion, valmar, lindon, vingilot, dan verifikasi bahwa setiap host mengenali dan menggunakan hostname tersebut secara system-wide. Buat setiap domain untuk masing masing node sesuai dengan namanya (contoh: eru..com) dan assign IP masing-masing juga. Lakukan pengecualian untuk node yang bertanggung jawab atas ns1 dan ns2
    <pre>
@@ -96,6 +97,7 @@
 
         service bind9 restart
    </pre>
+   ![alt text](assets/soal_5.jpeg)
 
 6. Lonceng Valmar berdentang mengikuti irama Tirion. Pastikan zone transfer berjalan, Pastikan Valmar (ns2) telah menerima salinan zona terbaru dari Tirion (ns1). Nilai serial SOA di keduanya harus sama
 
@@ -125,6 +127,7 @@
 
         service bind9 restart
     </pre>
+    ![alt text](assets/soal_6.jpeg)
 
 
 7. Peta kota dan pelabuhan dilukis. Sirion sebagai gerbang, Lindon sebagai web statis, Vingilot sebagai web dinamis. Tambahkan pada zona .com A record untuk sirion..com (IP Sirion), lindon..com (IP Lindon), dan vingilot..com (IP Vingilot). Tetapkan CNAME :
@@ -144,6 +147,8 @@
 
         service bind9 restart
    </pre>
+     ![alt text](assets/soal_7.jpeg)
+     ![alt text](assets/soal_7_2.jpeg)
    
 8. Setiap jejak harus bisa diikuti. Di Tirion (ns1) deklarasikan satu reverse zone untuk segmen DMZ tempat Sirion, Lindon, Vingilot berada. Di Valmar (ns2) tarik reverse zone tersebut sebagai slave, isi PTR untuk ketiga hostname itu agar pencarian balik IP address mengembalikan hostname yang benar, lalu pastikan query reverse untuk alamat Sirion, Lindon, Vingilot dijawab authoritative.
 
@@ -154,6 +159,10 @@
         nameserver 192.168.122.1
         EOF
     </pre>
+      ![alt text](assets/soal_8.jpeg)
+      ![alt text](assets/soal_8_2.jpeg)
+      ![alt text](assets/soal_8_3.jpeg)
+      ![alt text](assets/soal_8_4.jpeg)
 
 9. Lampion Lindon dinyalakan. Jalankan web statis pada hostname static.<xxxx>.com dan buka folder arsip /annals/ dengan autoindex (directory listing) sehingga isinya dapat ditelusuri. Akses harus dilakukan melalui hostname, bukan IP.
     <pre>
