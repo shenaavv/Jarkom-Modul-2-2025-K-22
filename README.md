@@ -31,143 +31,101 @@
 
 4. Para penjaga nama naik ke menara, di Tirion (ns1/master) bangun zona <xxxx>.com sebagai authoritative dengan SOA yang menunjuk ke ns1.<xxxx>.com dan catatan NS untuk ns1.<xxxx>.com dan ns2..com. Buat A record untuk ns1.<xxxx>.com dan ns2.<xxxx>.com yang mengarah ke alamat Tirion dan Valmar sesuai glosarium, serta A record apex <xxxx>.com yang mengarah ke alamat Sirion (front door), aktifkan notify dan allow-transfer ke Valmar, set forwarders ke 192.168.122.1. Di Valmar (ns2/slave) tarik zona <xxxx>.com dari Tirion dan pastikan menjawab authoritative. pada seluruh host non-router ubah urutan resolver menjadi ns1.<xxxx>.com → ns2.<xxxx>.com → 192.168.122.1. Verifikasi query ke apex dan hostname layanan dalam zona dijawab melalui ns1/ns2.
 
-   - Tirion
-     <pre>
-         apt update
-         apt install bind9 -y
-         ln -s /etc/init.d/named /etc/init.d/bind9
-     </pre>
-     <pre>
-         cat <<EOF > /etc/bind/named.conf.options
-         options {
-             directory "/var/cache/bind";
-     
-             forwarders {
-                 192.168.122.1;
-         };
-     
-             allow-query { any; };
-             auth-nxdomain no;
-             listen-on { any; };
-             listen-on-v6 { any; };
-         };
-     
-         EOF
-     </pre>
-     <pre>
-         mkdir -p /etc/bind/k22 && cat <<EOF > /etc/bind/k22/k22.com
-         \$TTL    604800          ; Waktu cache default (detik)
-         @       IN      SOA     ns1.k22.com. root.k22.com. (
-                                 2025100401 ; Serial (format YYYYMMDDXX)
-                                 604800     ; Refresh (1 minggu)
-                                 86400      ; Retry (1 hari)
-                                 2419200    ; Expire (4 minggu)
-                                 604800 )   ; Negative Cache TTL
-     
-         @        IN      NS     ns1.k22.com.
-         @        IN      NS     ns2.k22.com.
-     
-         ns1     IN       A      10.91.3.3
-         ns2     IN       A      10.91.3.4
-     
-         @       IN       A      10.91.3.2
-     
-         EOF
-     </pre>
-     <pre>
-         cat <<EOF > /etc/bind/named.conf.local
-         zone "k22.com" {
-             type master;
-             file "/etc/bind/k22/k22.com";
-             allow-transfer { 10.91.3.4; };
-             notify yes;
-         };
-     
-         EOF
-     </pre>
-     <pre>
-         service bind9 restart
-     </pre>
-     <pre>
-         echo "nameserver 10.91.3.3" > /etc/resolv.conf
-         echo "nameserver 10.91.3.4" >> /etc/resolv.conf
-         echo "nameserver 192.168.122.1" >> /etc/resolv.conf
-     </pre>
-     <pre>
-         dig @localhost k22.com
-     </pre>
+    <pre>
+        echo "tirion" > /etc/hostname
+        hostname tirion
+        echo "127.0.1.1 tirion" >> /etc/hosts
+        ip route add default via 10.15.43.29 2>/dev/null
+        ip addr add 192.234.3.3/24 dev eth0 2>/dev/null
 
-   - Valmar
-     <pre>
-         apt update
-         apt install bind9 -y
-         ln -s /etc/init.d/named /etc/init.d/bind9
-     </pre>
-     <pre>
-         cat <<EOF > /etc/bind/named.conf.options
-         options {
-             directory "/var/cache/bind";
-     
-             forwarders {
-                 192.168.122.1;
-         };
-     
-             allow-query { any; };
-             auth-nxdomain no;
-             listen-on { any; };
-             listen-on-v6 { any; };
-         };
-     
-         EOF
-     </pre>
-     <pre>
-         mkdir -p /var/lib/bind/k22 && chown bind:bind /var/lib/bind/k22 && cat <<EOF > /etc/bind/named.conf.local
-         zone "k22.com" {
-              type slave;
-             masters { 10.91.3.3; };
-             file "/var/lib/bind/k22/k22.com";
-         };
-     
-         EOF
-     </pre>
-     <pre>
-         service bind9 restart
-     </pre>
-     <pre>
-         echo "nameserver 10.91.3.3" > /etc/resolv.conf
-         echo "nameserver 10.91.3.4" >> /etc/resolv.conf
-         echo "nameserver 192.168.122.1" >> /etc/resolv.conf
-     </pre>
+        apt update
+        apt install -y bind9
+
+        cat > /etc/bind/db.K22.com <<'EOF'
+        $TTL 86400
+        @   IN  SOA ns1.K22.com. admin.K22.com. (
+                2025101301
+                3600
+                1800
+                604800
+                86400 )
+            IN  NS  ns1.K22.com.
+            IN  NS  ns2.K22.com.
+        ns1 IN  A   192.234.3.3
+        ns2 IN  A   192.234.3.4
+        @   IN  A   10.15.43.35
+        www     IN  CNAME   sirion
+        static  IN  CNAME   lindon
+        app     IN  CNAME   vingilot
+        sirion   IN  A   10.15.43.35
+        lindon   IN  A   10.15.43.38
+        vingilot IN  A   10.15.43.39
+        EOF
+
+        cat > /etc/bind/named.conf.local <<'EOF'
+        zone "K22.com" {
+            type master;
+            file "/etc/bind/db.K22.com";
+            allow-transfer { 192.234.3.4; };
+            notify yes;
+        };
+        EOF
+
+        service bind9 restart
+    </pre>
 
 5. “Nama memberi arah,” kata Eonwe. Namai semua tokoh (hostname) sesuai glosarium, eonwe, earendil, elwing, cirdan, elrond, maglor, sirion, tirion, valmar, lindon, vingilot, dan verifikasi bahwa setiap host mengenali dan menggunakan hostname tersebut secara system-wide. Buat setiap domain untuk masing masing node sesuai dengan namanya (contoh: eru..com) dan assign IP masing-masing juga. Lakukan pengecualian untuk node yang bertanggung jawab atas ns1 dan ns2
    <pre>
-       cat <<EOF >> /etc/bind/k22/k22.com
-       earendil       IN       A      10.91.1.2
-       elwing         IN       A      10.91.1.3
-       cirdan         IN       A      10.91.2.2
-       elrond         IN       A      10.91.2.3
-       maglor         IN       A      10.91.2.4
-       sirion         IN       A      10.91.3.2
-       lindon         IN       A      10.91.3.5
-       vingilot       IN       A      10.91.3.6
-   
-       EOF
-   </pre>
-   <pre>
-       service bind9 restart
+        #!/bin/bash
+        echo "valmar" > /etc/hostname
+        hostname valmar
+        echo "127.0.1.1 valmar" >> /etc/hosts
+        ip route add default via 10.15.43.29 2>/dev/null
+        ip addr add 192.234.3.4/24 dev eth0 2>/dev/null
+
+        apt update
+        apt install -y bind9
+
+        cat > /etc/bind/named.conf.local <<'EOF'
+        zone "K22.com" {
+            type slave;
+            file "/var/cache/bind/db.K22.com";
+            masters { 192.234.3.3; };
+        };
+        EOF
+
+        service bind9 restart
    </pre>
 
 6. Lonceng Valmar berdentang mengikuti irama Tirion. Pastikan zone transfer berjalan, Pastikan Valmar (ns2) telah menerima salinan zona terbaru dari Tirion (ns1). Nilai serial SOA di keduanya harus sama
 
-- Tirion
 <pre>
-   dig @10.91.3.3 k22.com SOA +short
+    #!/bin/bash
+    cat > /etc/bind/db.10.15.43 <<'EOF'
+    $TTL 86400
+    @   IN  SOA ns1.K22.com. admin.K22.com. (
+            2025101301
+            3600
+            1800
+            604800
+            86400 )
+        IN  NS  ns1.K22.com.
+        IN  NS  ns2.K22.com.
+    35  IN  PTR sirion.K22.com.
+    38  IN  PTR lindon.K22.com.
+    39  IN  PTR vingilot.K22.com.
+    EOF
+
+    echo '
+    zone "43.15.10.in-addr.arpa" {
+        type master;
+        file "/etc/bind/db.10.15.43";
+        allow-transfer { 192.234.3.4; };
+    };' >> /etc/bind/named.conf.local
+
+    service bind9 restart
 </pre>
 
-- Valmar
-<pre>
-   dig @10.91.3.4 k22.com SOA +short
-</pre>
 
 7. Peta kota dan pelabuhan dilukis. Sirion sebagai gerbang, Lindon sebagai web statis, Vingilot sebagai web dinamis. Tambahkan pada zona .com A record untuk sirion..com (IP Sirion), lindon..com (IP Lindon), dan vingilot..com (IP Vingilot). Tetapkan CNAME :
 
@@ -177,163 +135,145 @@
 
    Verifikasi dari dua klien berbeda bahwa seluruh hostname tersebut ter-resolve ke tujuan yang benar dan konsisten.
    <pre>
-       cat <<EOF >> /etc/bind/k22/k22.com
-       www       IN       CNAME      sirion.k22.com.
-       static    IN       CNAME      lindon.k22.com.
-       app       IN       CNAME      elrond.k22.com.
-   
-       EOF
-   </pre>
-   <pre>
-       service bind9 restart
-   </pre>
+        echo '
+        zone "43.15.10.in-addr.arpa" {
+            type slave;
+            file "/var/cache/bind/db.10.15.43";
+            masters { 192.234.3.3; };
+        };' >> /etc/bind/named.conf.local
 
+        service bind9 restart
+   </pre>
+   
 8. Setiap jejak harus bisa diikuti. Di Tirion (ns1) deklarasikan satu reverse zone untuk segmen DMZ tempat Sirion, Lindon, Vingilot berada. Di Valmar (ns2) tarik reverse zone tersebut sebagai slave, isi PTR untuk ketiga hostname itu agar pencarian balik IP address mengembalikan hostname yang benar, lalu pastikan query reverse untuk alamat Sirion, Lindon, Vingilot dijawab authoritative.
 
-#### **Konfigurasi di Tirion (Master)**
-
-Pertama, kami mendeklarasikan _reverse zone_ `3.91.10.in-addr.arpa` di file `/etc/bind/named.conf.local`.
-
-```sh
-cat <<EOF >> /etc/bind/named.conf.local
-zone "3.91.10.in-addr.arpa" {
-    type master;
-    file "/etc/bind/k22/3.91.10.in-addr.arpa";
-    allow-transfer { 10.91.3.4; };
-};
-EOF
-```
-
-Selanjutnya, kami membuat file _zone_-nya dan mengisinya dengan _record_ `PTR` untuk Sirion (`10.91.3.2`), Lindon (`10.91.3.5`), dan Vingilot (`10.91.3.6`).
-
-```sh
-cat <<EOF > /etc/bind/k22/3.91.10.in-addr.arpa
-\$TTL    604800
-@       IN      SOA     ns1.k22.com. root.k22.com. (
-                        2025100401 ; Serial
-                        604800     ; Refresh
-                        86400      ; Retry
-                        2419200    ; Expire
-                        604800 )   ; Negative Cache TTL
-
-@        IN      NS     ns1.k22.com.
-@        IN      NS     ns2.k22.com.
-
-2       IN       PTR    sirion.k22.com.
-5       IN       PTR    lindon.k22.com.
-6       IN       PTR    vingilot.k22.com.
-EOF
-```
-
-#### **Konfigurasi di Valmar (Slave)**
-
-Di Valmar, kami mengkonfigurasinya sebagai _slave_ untuk _reverse zone_ yang sama, dengan menunjuk Tirion sebagai _master_.
-
-```sh
-cat <<EOF >> /etc/bind/named.conf.local
-zone "3.91.10.in-addr.arpa" {
-  type slave;
-  masters { 10.91.3.3; };
-  file "/var/lib/bind/k22/3.91.10.in-addr.arpa";
-};
-EOF
-```
-
-#### **Verifikasi**
-
-Pengujian dilakukan dari klien **Earendil** menggunakan perintah:
-
-```sh
-host -t ptr 10.91.3.2
-host -t ptr 10.91.3.5
-host -t ptr 10.91.3.6
-```
-
-Hasil verifikasi menunjukkan bahwa setiap alamat IP berhasil dipetakan kembali ke _hostname_ yang sesuai, menandakan konfigurasi _Reverse DNS_ telah berhasil. 9. Lampion Lindon Dinyalakan (Web Server Statis)
-_ Konfigurasi di Lindon
 <pre>
-apt update
-apt install apache2 -y
-mkdir -p /var/www/annals/
+    cat > /etc/resolv.conf <<EOF
+    nameserver 192.234.3.3
+    nameserver 192.234.3.4
+    nameserver 192.168.122.1
+    EOF
 </pre>
-<pre>
-cat <<EOF > /etc/apache2/sites-available/000-default.conf
-<VirtualHost _:80>
-ServerAdmin webmaster@lindon.k22.com
-DocumentRoot /var/www/annals
-<Directory /var/www/annals>
-Options +Indexes
-AllowOverride None
-Require all granted
-</Directory>
 
-            ErrorLog /var/log/apache2/error.log
-            CustomLog /var/log/apache2/access.log combined
-        </VirtualHost>
-        EOF
-    </pre>
-    <pre>
-        service apache2 restart
-    </pre>
+9. Lampion Lindon dinyalakan. Jalankan web statis pada hostname static.<xxxx>.com dan buka folder arsip /annals/ dengan autoindex (directory listing) sehingga isinya dapat ditelusuri. Akses harus dilakukan melalui hostname, bukan IP.
+<pre>
+    echo "lindon" > /etc/hostname
+    hostname lindon
+    ip route add default via 10.15.43.29
+
+    apt update
+    apt install -y nginx
+
+    mkdir -p /var/www/static.K22.com/html/annals
+    echo "<h1>Lindon - K22</h1>" > /var/www/static.K22.com/html/index.html
+    echo "Archived record" > /var/www/static.K22.com/html/annals/record.txt
+
+    cat > /etc/nginx/sites-available/static.K22.com <<'EOF'
+    server {
+        listen 80;
+        server_name static.K22.com;
+        root /var/www/static.K22.com/html;
+        index index.html;
+        location /annals/ {
+            autoindex on;
+            autoindex_localtime on;
+        }
+    }
+    EOF
+
+    ln -sf /etc/nginx/sites-available/static.K22.com /etc/nginx/sites-enabled/
+    rm -f /etc/nginx/sites-enabled/default
+    service nginx restart
+</pre>
 
 10. Vingilot mengisahkan cerita dinamis. Jalankan web dinamis (PHP-FPM) pada hostname app.<xxxx>.com dengan beranda dan halaman about, serta terapkan rewrite sehingga /about berfungsi tanpa akhiran .php. Akses harus dilakukan melalui hostname.
-    - Konfigurasi di vingilot
+
       <pre>
-          apt install apache2 php php8.4-fpm libapache2-mod-fcgid -y
-      </pre>
-      <pre>
-          cat <<EOF > /etc/apache2/sites-available/000-default.conf
-          <VirtualHost *:80>
-              ServerAdmin webmaster@vingilot.k22.com
-              DocumentRoot /var/www/html
-              <Directory /var/www/html>
-                  AllowOverride All
-              </Directory>
-              <FilesMatch \.php$>
-                  SetHandler "proxy:unix:/var/run/php/php8.4-fpm.sock|fcgi://localhost/"
-              </FilesMatch>
-          </VirtualHost>
-          EOF
-      </pre>
-11. Di muara sungai, Sirion berdiri sebagai reverse proxy. Terapkan path-based routing: /static → Lindon dan /app → Vingilot, sambil meneruskan header Host dan X-Real-IP ke backend. Pastikan Sirion menerima www..com (kanonik) dan sirion..com, dan bahwa konten pada /static dan /app di-serve melalui backend yang tepat.
-    \*Konfigurasi di sirion
-    <pre>
+        #!/bin/bash
+        echo "vingilot" > /etc/hostname
+        hostname vingilot
+        ip route add default via 10.15.43.29
+
         apt update
-        apt install nginx -y
-    </pre>
-    <pre>
-        cat <<EOF > /etc/nginx/sites-available/default
+        apt install -y wget ca-certificates gnupg
+        wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg --no-check-certificate
+        echo "deb https://packages.sury.org/php/ bookworm main" > /etc/apt/sources.list.d/php.list
+        apt update
+        apt install -y nginx php8.4-fpm
+
+        mkdir -p /var/www/app.K22.com/html
+        echo '<?php echo "<h1>Vingilot Home</h1>"; ?>' > /var/www/app.K22.com/html/index.php
+        echo '<?php echo "<h1>About Page</h1>"; ?>' > /var/www/app.K22.com/html/about.php
+
+        cat > /etc/nginx/sites-available/app.K22.com <<'EOF'
         server {
             listen 80;
-            server_name www.k22.com sirion.k22.com;
-    
-            proxy_set_header Host \$host;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header X-Real-IP \$remote_addr;
-    
+            server_name app.K22.com;
+            root /var/www/app.K22.com/html;
+            index index.php;
             location / {
-                root /var/www/html;
-                index index.html index.htm;
-                try_files \$uri \$uri/ =404;
+                try_files $uri $uri/ @rewrite;
             }
-    
-            location /static/ {
-                proxy_pass http://lindon.k22.com/;
+            location @rewrite {
+                rewrite ^/about$ /about.php last;
             }
-    
-            location /app/ {
-                proxy_pass http://vingilot.k22.com/;
+            location ~ \.php$ {
+                include snippets/fastcgi-php.conf;
+                fastcgi_pass unix:/run/php/php8.4-fpm.sock;
+                fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+                include fastcgi_params;
             }
         }
         EOF
-    </pre>
+
+        ln -sf /etc/nginx/sites-available/app.K22.com /etc/nginx/sites-enabled/
+        rm -f /etc/nginx/sites-enabled/default
+        service php8.4-fpm restart
+        service nginx restart
+      </pre>
+    
+11. Di muara sungai, Sirion berdiri sebagai reverse proxy. Terapkan path-based routing: /static → Lindon dan /app → Vingilot, sambil meneruskan header Host dan X-Real-IP ke backend. Pastikan Sirion menerima www..com (kanonik) dan sirion..com, dan bahwa konten pada /static dan /app di-serve melalui backend yang tepat.
+
     <pre>
+        echo "sirion" > /etc/hostname
+        hostname sirion
+        ip route add default via 10.15.43.29
+
+        apt update
+        apt install -y nginx
+
+        cat > /etc/nginx/sites-available/sirion_proxy <<'EOF'
+        server {
+            listen 80;
+            server_name sirion.K22.com;
+            return 301 http://www.K22.com$request_uri;
+        }
+        server {
+            listen 80;
+            server_name www.K22.com;
+            location /static/ {
+                proxy_pass http://static.K22.com/;
+                proxy_set_header Host static.K22.com;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+            location /app/ {
+                proxy_pass http://app.K22.com/;
+                proxy_set_header Host app.K22.com;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+            location = / {
+                return 302 /static/;
+            }
+        }
+        EOF
+
+        ln -sf /etc/nginx/sites-available/sirion_proxy /etc/nginx/sites-enabled/
+        rm -f /etc/nginx/sites-enabled/default
         service nginx restart
     </pre>
-
+    
 12. Membuat path admin pada node sirion, dan implementasi basic autentikasi (sirion)
 
-    - install nginx dan apache
     <pre>
         apt-get install apache2-utils -y
         apt install nginx -y
